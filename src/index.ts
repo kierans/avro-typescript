@@ -34,12 +34,16 @@ export function convertPrimitive(avroType: string): string {
         case "double":
         case "float":
             return "number";
+
         case "bytes":
             return "Buffer";
+
         case "null":
             return "null";
+
         case "boolean":
             return "boolean";
+
         default:
             return null;
     }
