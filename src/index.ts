@@ -25,23 +25,27 @@ import {
 
 /** Converts an Avro record type to a TypeScript file */
 export function avroToTypeScript(schema: Schema, opts: ConversionOptions = {}): string {
-    const output: string[] = [];
-
     const metadata: Metadata = !isNamedType(schema) ? {} : {
         namespace: schema.namespace
     };
 
+    return convertSchema(metadata, schema, opts).join("\n");
+}
+
+function convertSchema(meta: Metadata, schema: Schema, opts: ConversionOptions): string[] {
+    const output: string[] = [];
+
     if (isEnumType(schema)) {
-        convertEnum(metadata, schema, output);
-    }
-    else {
-        if (isRecordType(schema)) {
-            convertRecord(metadata, schema, output, opts);
-        }
-        else {
-            throw "Unknown top level type " + (schema as ComplexType)["type"];
-        }
+        convertEnum(meta, schema, output);
+
+        return output;
     }
 
-    return output.join("\n");
+    if (isRecordType(schema)) {
+        convertRecord(meta, schema, output, opts);
+
+        return output;
+    }
+
+    throw "Unknown top level type " + (schema as ComplexType)["type"];
 }
