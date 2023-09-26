@@ -6,8 +6,12 @@ export interface ConversionOptions {
 }
 
 export type Type = NameOrType | NameOrType[];
-export type NameOrType = TypeNames | RecordType | ArrayType | NamedType | LogicalType;
-export type TypeNames = "record" | "array" | "null" | "map" | string;
+export type NameOrType = PrimitiveTypeNames | ComplexType | LogicalType | ReferencedType;
+export type ReferencedType = string;
+export type PrimitiveTypeNames = "null" | "boolean" | "int" | "long" | "float" | "double" | "bytes" | "string";
+export type ComplexTypeNames = "record" | "array" | "map" | "enum";
+export type NamedComplexTypeNames = Extract<ComplexTypeNames, "record" | "enum">;
+export type TypeNames =  PrimitiveTypeNames | ComplexTypeNames | ReferencedType;
 
 export interface Field {
     name: string;
@@ -19,50 +23,61 @@ export interface BaseType {
     type: TypeNames;
 }
 
-export interface RecordType extends BaseType {
+export interface ComplexType extends BaseType {
+    type: ComplexTypeNames;
+}
+
+export interface RecordType extends NamedComplexType {
     type: "record";
-    name: string;
     fields: Field[];
 }
 
-export interface ArrayType extends BaseType {
+export interface ArrayType extends ComplexType {
     type: "array";
     items: Type;
 }
 
-export interface MapType extends BaseType {
+export interface MapType extends ComplexType {
     type: "map";
     values: Type;
 }
 
-export interface EnumType extends BaseType {
+export interface EnumType extends NamedComplexType {
     type: "enum";
-    name: string;
     symbols: string[];
 }
 
-export interface NamedType extends BaseType {
-    type: string;
+export interface NamedComplexType extends ComplexType {
+    type: NamedComplexTypeNames;
+    name: string;
 }
 
 export interface LogicalType extends BaseType {
     logicalType: string;
 }
 
-export function isRecordType(type: BaseType): type is RecordType {
-    return type.type === "record";
+export function isComplexType(type: Type): type is ComplexType {
+    return typeof type === "object" && "type" in type
 }
 
-export function isArrayType(type: BaseType): type is ArrayType {
-    return type.type === "array";
+export function isNamedType(type: Type): type is NamedComplexType {
+    return isComplexType(type) && "name" in type;
 }
 
-export function isMapType(type: BaseType): type is MapType {
-    return type.type === "map";
+export function isRecordType(type: Type): type is RecordType {
+    return isComplexType(type) && type.type === "record";
 }
 
-export function isEnumType(type: BaseType): type is EnumType {
-    return type.type === "enum";
+export function isArrayType(type: Type): type is ArrayType {
+    return isComplexType(type) && type.type === "array";
+}
+
+export function isMapType(type: Type): type is MapType {
+    return isComplexType(type) && type.type === "map";
+}
+
+export function isEnumType(type: Type): type is EnumType {
+    return isComplexType(type) && type.type === "enum";
 }
 
 export function isUnionType(type: Type): type is NameOrType[] {
@@ -78,8 +93,21 @@ export function isOptional(type: Type): boolean {
     }
 }
 
-export function isPrimitiveType(type: Type): type is string {
-    return typeof type === "string";
+export function isPrimitiveType(type: Type): type is PrimitiveTypeNames {
+    return typeof type === "string" && (
+      type === "null" ||
+      type === "boolean" ||
+      type === "int" ||
+      type === "long" ||
+      type === "float" ||
+      type === "double" ||
+      type === "bytes" ||
+      type === "string"
+    )
+}
+
+export function isReferencedType(type: Type): type is ReferencedType {
+    return typeof type === "string" && !isPrimitiveType(type);
 }
 
 export function isLogicalType(type: Type): type is LogicalType {
