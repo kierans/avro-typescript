@@ -19,15 +19,20 @@ import {
     isEnumType,
     isLogicalType,
     isMapType,
-    isOptional, isPrimitiveType,
-    isRecordType, isUnionType,
+    isNamedType,
+    isPrimitiveType,
+    isRecordType,
+    isReferencedType,
+    isUnionType,
+    NameOrType,
+    PrimitiveTypeNames,
     RecordType,
     Schema,
     Type,
 } from "./model";
 
 /** Convert a primitive type from avro to TypeScript */
-export function convertPrimitive(avroType: string): string {
+export function convertPrimitive(avroType: PrimitiveTypeNames): string {
     switch (avroType) {
         case "long":
         case "int":
@@ -44,8 +49,11 @@ export function convertPrimitive(avroType: string): string {
         case "boolean":
             return "boolean";
 
+        case "string":
+            return "string";
+
         default:
-            return null;
+            return "UNKNOWN_PRIMITIVE";
     }
 }
 
@@ -86,15 +94,36 @@ export function convertEnum(enumType: EnumType, fileBuffer: string[]): string {
     return enumType.name;
 }
 
+export function convertUnionType(type: NameOrType): NameOrType  {
+    if (isReferencedType(type)) {
+        // console.error(`Referenced type ${type}`);
+        return discriminatorType(type, type);
+    }
+
+    if (isNamedType(type)) {
+        console.error(`Named type ${type.name}`);
+
+        return discriminatorType(type.name, type);
+    }
+
+    return type;
+}
+
 export function convertType(type: Type, buffer: string[], opts: ConversionOptions): string {
     // if it's just a name, then use that
+    if (isReferencedType(type)) {
+        return type;
+    }
+
     if (isPrimitiveType(type)) {
-        return convertPrimitive(type) || type;
+        return convertPrimitive(type);
     }
 
     if (isUnionType(type)) {
+        const discriminatedTypes = type.map(convertUnionType);
+
         // array means a Union. Use the names and call recursively
-        return type.map((t) => convertType(t, buffer, opts)).join(" | ");
+        return discriminatedTypes.map((t) => convertType(t, buffer, opts)).join(" | ");
     }
 
     if (isRecordType(type)) {
@@ -134,4 +163,17 @@ export function convertType(type: Type, buffer: string[], opts: ConversionOption
 export function convertFieldDec(field: Field, buffer: string[], opts: ConversionOptions): string {
     // Union Type
     return `\t${field.name}: ${convertType(field.type, buffer, opts)};`;
+}
+
+export function discriminatorType(name: string, type: NameOrType): RecordType {
+    return {
+        type: "record",
+        name: `${name}Discriminator`,
+        fields: [
+            {
+                name: `"com.foo.${name}"`,
+                type
+            }
+        ]
+    }
 }
