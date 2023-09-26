@@ -50,6 +50,7 @@ export interface EnumType extends NamedComplexType {
 export interface NamedComplexType extends ComplexType {
     type: NamedComplexTypeNames;
     name: string;
+    namespace?: string;
 }
 
 export interface LogicalType extends BaseType {
