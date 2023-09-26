@@ -65,17 +65,21 @@ export function isEnumType(type: BaseType): type is EnumType {
     return type.type === "enum";
 }
 
-export function isUnion(type: Type): type is NamedType[] {
+export function isUnionType(type: Type): type is NameOrType[] {
     return type instanceof Array;
 }
 
 export function isOptional(type: Type): boolean {
-    if (isUnion(type)) {
+    if (isUnionType(type)) {
         const t1 = type[0];
         if (typeof t1 === "string") {
             return t1 === "null";
         }
     }
+}
+
+export function isPrimitiveType(type: Type): type is string {
+    return typeof type === "string";
 }
 
 export function isLogicalType(type: Type): type is LogicalType {

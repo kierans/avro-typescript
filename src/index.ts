@@ -19,8 +19,8 @@ import {
     isEnumType,
     isLogicalType,
     isMapType,
-    isOptional,
-    isRecordType,
+    isOptional, isPrimitiveType,
+    isRecordType, isUnionType,
     RecordType,
     Schema,
     Type,
@@ -84,11 +84,11 @@ export function convertEnum(enumType: EnumType, fileBuffer: string[]): string {
 
 export function convertType(type: Type, buffer: string[], opts: ConversionOptions): string {
     // if it's just a name, then use that
-    if (typeof type === "string") {
+    if (isPrimitiveType(type)) {
         return convertPrimitive(type) || type;
     }
 
-    if (type instanceof Array) {
+    if (isUnionType(type)) {
         // array means a Union. Use the names and call recursively
         return type.map((t) => convertType(t, buffer, opts)).join(" | ");
     }
