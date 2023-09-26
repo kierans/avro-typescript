@@ -57,6 +57,10 @@ export interface LogicalType extends BaseType {
     logicalType: string;
 }
 
+export interface Metadata {
+    namespace?: string;
+}
+
 export function isComplexType(type: Type): type is ComplexType {
     return typeof type === "object" && "type" in type
 }
@@ -113,4 +117,8 @@ export function isReferencedType(type: Type): type is ReferencedType {
 
 export function isLogicalType(type: Type): type is LogicalType {
     return typeof type !== "string" && "logicalType" in type;
+}
+
+export function fullName(namespace: string | undefined, name: string): string {
+    return `${namespace ? namespace : ""}${namespace ? "." : ""}${name}`;
 }
