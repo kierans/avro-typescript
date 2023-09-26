@@ -12,6 +12,7 @@ export {
 } from "./model";
 
 import {
+    ComplexType,
     ConversionOptions,
     EnumType,
     Field,
@@ -31,8 +32,12 @@ import {
     Type,
 } from "./model";
 
+interface Metadata {
+    namespace?: string;
+}
+
 /** Convert a primitive type from avro to TypeScript */
-export function convertPrimitive(avroType: PrimitiveTypeNames): string {
+export function convertPrimitive(_: Metadata, avroType: PrimitiveTypeNames): string {
     switch (avroType) {
         case "long":
         case "int":
@@ -61,15 +66,19 @@ export function convertPrimitive(avroType: PrimitiveTypeNames): string {
 export function avroToTypeScript(schema: Schema, opts: ConversionOptions = {}): string {
     const output: string[] = [];
 
+    const metadata: Metadata = !isNamedType(schema) ? {} : {
+        namespace: schema.namespace
+    };
+
     if (isEnumType(schema)) {
-        convertEnum(schema, output);
+        convertEnum(metadata, schema, output);
     }
     else {
         if (isRecordType(schema)) {
-            convertRecord(schema, output, opts);
+            convertRecord(metadata, schema, output, opts);
         }
         else {
-            throw "Unknown top level type " + (schema as unknown)["type"];
+            throw "Unknown top level type " + (schema as ComplexType)["type"];
         }
     }
 
@@ -77,10 +86,15 @@ export function avroToTypeScript(schema: Schema, opts: ConversionOptions = {}): 
 }
 
 /** Convert an Avro Record type. Return the name, but add the definition to the file */
-export function convertRecord(recordType: RecordType, fileBuffer: string[], opts: ConversionOptions): string {
+export function convertRecord(
+  meta: Metadata,
+  recordType: RecordType,
+  fileBuffer: string[],
+  opts: ConversionOptions
+): string {
     let buffer = `export interface ${recordType.name} {\n`;
     for (let field of recordType.fields) {
-        buffer += convertFieldDec(field, fileBuffer, opts) + "\n";
+        buffer += convertFieldDec(meta, field, fileBuffer, opts) + "\n";
     }
     buffer += "}\n";
     fileBuffer.push(buffer);
@@ -88,62 +102,59 @@ export function convertRecord(recordType: RecordType, fileBuffer: string[], opts
 }
 
 /** Convert an Avro Enum type. Return the name, but add the definition to the file */
-export function convertEnum(enumType: EnumType, fileBuffer: string[]): string {
+export function convertEnum(_: Metadata, enumType: EnumType, fileBuffer: string[]): string {
     const enumDef = `export enum ${enumType.name} { ${enumType.symbols.map(sym => `${sym} = '${sym}'`).join(", ")} };\n`;
     fileBuffer.push(enumDef);
     return enumType.name;
 }
 
-export function convertUnionType(type: NameOrType): NameOrType  {
+export function convertUnionType(meta: Metadata, type: NameOrType): NameOrType  {
     if (isReferencedType(type)) {
-        // console.error(`Referenced type ${type}`);
-        return discriminatorType(type, type);
+        return discriminatorType(meta, type, type);
     }
 
     if (isNamedType(type)) {
-        console.error(`Named type ${type.name}`);
-
-        return discriminatorType(type.name, type);
+        return discriminatorType(meta, type.name, type);
     }
 
     return type;
 }
 
-export function convertType(type: Type, buffer: string[], opts: ConversionOptions): string {
+export function convertType(meta: Metadata, type: Type, buffer: string[], opts: ConversionOptions): string {
     // if it's just a name, then use that
     if (isReferencedType(type)) {
         return type;
     }
 
     if (isPrimitiveType(type)) {
-        return convertPrimitive(type);
+        return convertPrimitive(meta, type);
     }
 
     if (isUnionType(type)) {
-        const discriminatedTypes = type.map(convertUnionType);
+        const discriminatedTypes = type.map((t) => convertUnionType(meta, t));
 
         // array means a Union. Use the names and call recursively
-        return discriminatedTypes.map((t) => convertType(t, buffer, opts)).join(" | ");
+        return discriminatedTypes.map((t) => convertType(meta, t, buffer, opts)).join(" | ");
     }
 
     if (isRecordType(type)) {
         // record, use the name and add to the buffer
-        return convertRecord(type, buffer, opts);
+        return convertRecord(meta, type, buffer, opts);
     }
 
     if (isArrayType(type)) {
         // array, call recursively for the array element type
-        return convertType(type.items, buffer, opts) + "[]";
+        return convertType(meta, type.items, buffer, opts) + "[]";
     }
 
     if (isMapType(type)) {
         // Dictionary of types, string as key
-        return `{ [index:string]:${convertType(type.values, buffer, opts)} }`;
+        return `{ [index:string]:${convertType(meta, type.values, buffer, opts)} }`;
     }
 
     if (isEnumType(type)) {
         // array, call recursively for the array element type
-        return convertEnum(type, buffer);
+        return convertEnum(meta, type, buffer);
     }
 
     if (isLogicalType(type)) {
@@ -151,29 +162,32 @@ export function convertType(type: Type, buffer: string[], opts: ConversionOption
             return opts.logicalTypes[type.logicalType];
         }
 
-        return convertType(type.type, buffer, opts);
+        return convertType(meta, type.type, buffer, opts);
     }
-
 
     console.error("Cannot work out type", type);
 
     return "UNKNOWN";
 }
 
-export function convertFieldDec(field: Field, buffer: string[], opts: ConversionOptions): string {
+export function convertFieldDec(meta: Metadata, field: Field, buffer: string[], opts: ConversionOptions): string {
     // Union Type
-    return `\t${field.name}: ${convertType(field.type, buffer, opts)};`;
+    return `\t${field.name}: ${convertType(meta, field.type, buffer, opts)};`;
 }
 
-export function discriminatorType(name: string, type: NameOrType): RecordType {
+export function discriminatorType(meta: Metadata, name: string, type: NameOrType): RecordType {
     return {
         type: "record",
         name: `${name}Discriminator`,
         fields: [
             {
-                name: `"com.foo.${name}"`,
+                name: `"${fullName(meta.namespace, name)}"`,
                 type
             }
         ]
     }
+}
+
+export function fullName(namespace: string | undefined, name: string): string {
+    return `${namespace ? namespace : ""}${namespace ? "." : ""}${name}`;
 }
