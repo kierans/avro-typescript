@@ -3,6 +3,9 @@
     "version": "1.2.0",
     "description": "TypeScript code generator for Apache Avro types",
     "main": "./lib/index.js",
+    "bin": {
+        "avro-ts": "lib/cli.js"
+    },
     "typings": "lib/index.d.ts",
     "files": [
         "lib"
@@ -48,5 +51,8 @@
             "tsx",
             "js"
         ]
+    },
+    "dependencies": {
+        "commander": "^11.0.0"
     }
 }

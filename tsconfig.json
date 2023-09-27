@@ -8,6 +8,7 @@
         "outDir": "lib"
     },
     "files": [
-        "src/index.ts","src/model.ts"
+        "src/cli.ts",
+        "src/index.ts"
     ]
 }
