@@ -1,18 +1,5 @@
 import { convertEnum, convertRecord } from "./types-generator";
 
-export {
-    EnumType,
-    Field,
-    isArrayType,
-    isEnumType,
-    isLogicalType,
-    isMapType,
-    isOptional,
-    isRecordType,
-    RecordType,
-    Type,
-} from "./model";
-
 import {
     ComplexType,
     ConversionOptions,

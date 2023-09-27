@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import { avroToTypeScript, RecordType } from "../src";
-import { Schema } from "../src/model";
+import { avroToTypeScript } from "../src";
+import { RecordType, Schema } from "../src/model";
 
 describe("avroToTypeScript", () => {
     test("it should generate an interface", () => {
