@@ -1,4 +1,4 @@
-import { convertEnum, convertRecord } from "./types-generator";
+import { convertType } from "./types-generator";
 
 import {
     ComplexType,
@@ -12,8 +12,9 @@ import {
 
 /** Converts an Avro record type to a TypeScript file */
 export function avroToTypeScript(schema: Schema, opts: ConversionOptions = {}): string {
-    const metadata: Metadata = !isNamedType(schema) ? {} : {
-        namespace: schema.namespace
+    const metadata: Metadata = !isNamedType(schema) ? emptyMetadata() : {
+        namespace: schema.namespace,
+        typeDefs: []
     };
 
     return convertSchema(metadata, schema, opts).join("\n");
@@ -22,17 +23,17 @@ export function avroToTypeScript(schema: Schema, opts: ConversionOptions = {}): 
 function convertSchema(meta: Metadata, schema: Schema, opts: ConversionOptions): string[] {
     const output: string[] = [];
 
-    if (isEnumType(schema)) {
-        convertEnum(meta, schema, output);
-
-        return output;
+    if (!isEnumType(schema) && !isRecordType(schema)) {
+        throw "Unknown top level type " + (schema as ComplexType)["type"];
     }
 
-    if (isRecordType(schema)) {
-        convertRecord(meta, schema, output, opts);
+    convertType(meta, schema, output, opts);
 
-        return output;
-    }
+    return output;
+}
 
-    throw "Unknown top level type " + (schema as ComplexType)["type"];
+function emptyMetadata(): Metadata {
+    return {
+        typeDefs: []
+    };
 }

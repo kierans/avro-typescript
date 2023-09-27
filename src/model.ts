@@ -1,11 +1,13 @@
 /**** Contains the Interfaces and Type Guards for Avro schema */
+import { isEqual } from "./predicates";
 
 export type Schema = RecordType | EnumType;
 export interface ConversionOptions {
     logicalTypes?: { [type: string]: string };
 }
 
-export type Type = NameOrType | NameOrType[];
+export type Type = NameOrType | UnionType;
+export type UnionType = NameOrType[];
 export type NameOrType = PrimitiveTypeNames | ComplexType | LogicalType | ReferencedType;
 export type ReferencedType = string;
 export type PrimitiveTypeNames = "null" | "boolean" | "int" | "long" | "float" | "double" | "bytes" | "string";
@@ -59,6 +61,9 @@ export interface LogicalType extends BaseType {
 
 export interface Metadata {
     namespace?: string;
+
+    // record of type definitions so that we don't try to redefine a type
+    typeDefs: string[];
 }
 
 export function isComplexType(type: Type): type is ComplexType {
@@ -119,6 +124,38 @@ export function isLogicalType(type: Type): type is LogicalType {
     return typeof type !== "string" && "logicalType" in type;
 }
 
+export function isExistingType(meta: Metadata, type: NameOrType): ReferencedType | undefined {
+    const name = getTypeName(type);
+
+    return meta.typeDefs.find(isEqual(name));
+}
+
+export function getTypeName(type: NameOrType): string {
+    if (isNamedType(type)) {
+        return type.name;
+    }
+
+    if (isComplexType(type)) {
+        return type.type;
+    }
+
+    if (isLogicalType(type)) {
+        return type.logicalType;
+    }
+
+    return type;
+}
+
 export function fullName(namespace: string | undefined, name: string): string {
     return `${namespace ? namespace : ""}${namespace ? "." : ""}${name}`;
+}
+
+export function capitalise(str: string): string {
+    if (str.length < 1) {
+        return "";
+    }
+
+    const chars = str.split("");
+
+    return `${chars[0].toUpperCase()}${chars.slice(1).join("")}`;
 }
