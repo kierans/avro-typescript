@@ -3,21 +3,29 @@
 exports[`avroToTypeScript it should generate an interface 1`] = `
 "export enum numberEnumType { ONE = 'ONE', TWO = 'TWO' };
 
+export interface numberEnumTypeDiscriminator {
+	\\"numberEnumType\\": numberEnumType;
+}
+
 export interface AllocsType {
 	allocAccount: null | string;
 	noNestedPartyIDs: null | number;
 	allocQty: null | number;
 }
 
+export interface AllocsTypeDiscriminator {
+	\\"AllocsType\\": AllocsType;
+}
+
 export interface ExampleType {
-	unionEnum: null | string | numberEnumType;
+	unionEnum: null | string | numberEnumTypeDiscriminator;
 	mandatoryString: string;
 	adouble: null | number;
 	astring: null | string;
 	amap: null | string | { [index:string]:numberEnumType };
 	recordArray: null | AllocsType[];
 	processCode: null | string;
-	named: null | AllocsType;
+	named: null | AllocsTypeDiscriminator;
 }
 "
 `;
