@@ -1,14 +1,8 @@
 import {
+  capitalise,
   ConversionOptions,
   EnumType,
   Field,
-  Metadata,
-  NameOrType,
-  PrimitiveTypeNames,
-  RecordType,
-  ReferencedType,
-  Type,
-  capitalise,
   fullName,
   getTypeName,
   isArrayType,
@@ -20,7 +14,14 @@ import {
   isPrimitiveType,
   isRecordType,
   isReferencedType,
-  isUnionType
+  isUnionType,
+  isUnnamedType,
+  Metadata,
+  NameOrType,
+  PrimitiveTypeNames,
+  RecordType,
+  ReferencedType,
+  Type
 } from "./model";
 
 /** Convert a primitive type from avro to TypeScript */
@@ -77,22 +78,22 @@ export function convertEnum(_: Metadata, enumType: EnumType, fileBuffer: string[
 }
 
 export function convertUnionType(meta: Metadata, type: NameOrType): NameOrType {
-  if (isPrimitiveType(type) && type !== "null") {
-    return primitiveDiscriminatorType(meta, type);
-  }
+    if (isReferencedType(type) || isNamedType(type)) {
+      return discriminatorType(type, `"${fullName(meta.namespace, getTypeName(type))}"`);
+    }
 
-  if (isReferencedType(type)) {
-    return namespacedDiscriminatorType(meta, type, type);
-  }
+    if (isUnnamedType(type)) {
+      return discriminatorType(type, type.type);
+    }
 
-  if (isNamedType(type)) {
-    return namespacedDiscriminatorType(meta, type.name, type);
-  }
+    if (isPrimitiveType(type) && type !== "null") {
+      return discriminatorType(type, type);
+    }
 
-  return type;
+    return type;
 }
 
-export function convertType(meta: Metadata, type: Type, buffer: string[], opts: ConversionOptions): ReferencedType  {
+export function convertType(meta: Metadata, type: Type, buffer: string[], opts: ConversionOptions): ReferencedType {
   if (isUnionType(type)) {
     return type
       .map((t) => convertType(meta, convertUnionType(meta, t), buffer, opts))
@@ -169,21 +170,17 @@ export function convertNewType(
     return "UNKNOWN";
 }
 
-export function namespacedDiscriminatorType(meta: Metadata, name: string, type: NameOrType): RecordType {
-  return discriminatorType(meta, `"${fullName(meta.namespace, name)}"`, type);
-}
-
-export function primitiveDiscriminatorType(meta: Metadata, type: PrimitiveTypeNames): ReferencedType | RecordType {
-  return discriminatorType(meta, type, type);
-}
-
-export function discriminatorType(meta: Metadata, name: string, type: NameOrType): RecordType {
+export function discriminatorType(
+  type: NameOrType,
+  fieldName: string,
+  typeName: string = getTypeName(type),
+): RecordType {
   return {
     type: "record",
-    name: `${capitalise(getTypeName(type))}Discriminator`,
+    name: `${capitalise(typeName)}Discriminator`,
     fields: [
       {
-        name,
+        name: fieldName,
         type
       }
     ]

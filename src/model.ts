@@ -13,6 +13,7 @@ export type ReferencedType = string;
 export type PrimitiveTypeNames = "null" | "boolean" | "int" | "long" | "float" | "double" | "bytes" | "string";
 export type ComplexTypeNames = "record" | "array" | "map" | "enum";
 export type NamedComplexTypeNames = Extract<ComplexTypeNames, "record" | "enum">;
+export type UnnamedComplexTypeNames = Extract<ComplexTypeNames, "array" | "map">;
 export type TypeNames =  PrimitiveTypeNames | ComplexTypeNames | ReferencedType;
 
 export interface Field {
@@ -55,6 +56,10 @@ export interface NamedComplexType extends ComplexType {
     namespace?: string;
 }
 
+export interface UnnamedComplexType extends ComplexType {
+    type: UnnamedComplexTypeNames;
+}
+
 export interface LogicalType extends BaseType {
     logicalType: string;
 }
@@ -72,6 +77,10 @@ export function isComplexType(type: Type): type is ComplexType {
 
 export function isNamedType(type: Type): type is NamedComplexType {
     return isComplexType(type) && "name" in type;
+}
+
+export function isUnnamedType(type: Type): type is UnnamedComplexType {
+    return isComplexType(type) && !isNamedType(type);
 }
 
 export function isRecordType(type: Type): type is RecordType {
@@ -130,20 +139,46 @@ export function isExistingType(meta: Metadata, type: NameOrType): ReferencedType
     return meta.typeDefs.find(isEqual(name));
 }
 
-export function getTypeName(type: NameOrType): string {
-    if (isNamedType(type)) {
-        return type.name;
-    }
-
-    if (isComplexType(type)) {
-        return type.type;
+export function getTypeName(type: Type): string {
+    if (isUnionType(type)) {
+        return `UnionOf${type.map(getTypeName).join("Or")}`;
     }
 
     if (isLogicalType(type)) {
         return type.logicalType;
     }
 
-    return type;
+    if (isNamedType(type)) {
+        return type.name;
+    }
+
+    if (isUnnamedType(type)) {
+        return getUnnamedTypeTypeName(type);
+    }
+
+    return type as string;
+}
+
+export function getUnnamedTypeTypeName(type: UnnamedComplexType): string {
+    if (isArrayType(type)) {
+        return getArrayItemsTypeName(type);
+    }
+
+    if (isMapType(type)) {
+        return getMapValuesTypeName(type);
+    }
+}
+
+export function getArrayItemsTypeName(type: ArrayType): string {
+    return getContainerTypeTypeName(type, type.items);
+}
+
+export function getMapValuesTypeName(type: MapType): string {
+    return getContainerTypeTypeName(type, type.values);
+}
+
+function getContainerTypeTypeName(containerType: ComplexType, containedType: Type): string {
+    return `${(capitalise(getTypeName(containedType)))}${capitalise(containerType.type)}`;
 }
 
 export function fullName(namespace: string | undefined, name: string): string {
