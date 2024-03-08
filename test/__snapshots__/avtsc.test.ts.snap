@@ -1,16 +1,36 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`avroToTypeScript it should generate an interface 1`] = `
-"export enum numberEnumType { ONE = 'ONE', TWO = 'TWO' };
+"export interface StringDiscriminator {
+	string: string;
+}
 
-export interface numberEnumTypeDiscriminator {
+export enum numberEnumType { ONE = 'ONE', TWO = 'TWO' };
+
+export interface NumberEnumTypeDiscriminator {
 	\\"numberEnumType\\": numberEnumType;
 }
 
+export interface DoubleDiscriminator {
+	double: number;
+}
+
+export interface NumberEnumTypeMapDiscriminator {
+	map: { [index:string]:numberEnumType };
+}
+
+export interface LongDiscriminator {
+	long: number;
+}
+
 export interface AllocsType {
-	allocAccount: null | string;
-	noNestedPartyIDs: null | number;
-	allocQty: null | number;
+	allocAccount: null | StringDiscriminator;
+	noNestedPartyIDs: null | LongDiscriminator;
+	allocQty: null | DoubleDiscriminator;
+}
+
+export interface AllocsTypeArrayDiscriminator {
+	array: AllocsType[];
 }
 
 export interface AllocsTypeDiscriminator {
@@ -18,13 +38,13 @@ export interface AllocsTypeDiscriminator {
 }
 
 export interface ExampleType {
-	unionEnum: null | string | numberEnumTypeDiscriminator;
+	unionEnum: null | StringDiscriminator | NumberEnumTypeDiscriminator;
 	mandatoryString: string;
-	adouble: null | number;
-	astring: null | string;
-	amap: null | string | { [index:string]:numberEnumType };
-	recordArray: null | AllocsType[];
-	processCode: null | string;
+	adouble: null | DoubleDiscriminator;
+	astring: null | StringDiscriminator;
+	amap: null | StringDiscriminator | NumberEnumTypeMapDiscriminator;
+	recordArray: null | AllocsTypeArrayDiscriminator;
+	processCode: null | StringDiscriminator;
 	named: null | AllocsTypeDiscriminator;
 }
 "
