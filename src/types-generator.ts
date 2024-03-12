@@ -79,15 +79,15 @@ export function convertEnum(_: Metadata, enumType: EnumType, fileBuffer: string[
 
 export function convertUnionType(meta: Metadata, type: NameOrType): NameOrType {
     if (isReferencedType(type) || isNamedType(type)) {
-      return discriminatorType(type, `"${fullName(meta.namespace, getTypeName(type))}"`);
+      return jsonEncodingType(type, `"${fullName(meta.namespace, getTypeName(type))}"`);
     }
 
     if (isUnnamedType(type)) {
-      return discriminatorType(type, type.type);
+      return jsonEncodingType(type, type.type);
     }
 
     if (isPrimitiveType(type) && type !== "null") {
-      return discriminatorType(type, type);
+      return jsonEncodingType(type, type);
     }
 
     return type;
@@ -170,14 +170,14 @@ export function convertNewType(
     return "UNKNOWN";
 }
 
-export function discriminatorType(
+export function jsonEncodingType(
   type: NameOrType,
   fieldName: string,
   typeName: string = getTypeName(type),
 ): RecordType {
   return {
     type: "record",
-    name: `${capitalise(typeName)}Discriminator`,
+    name: `${capitalise(typeName)}JSONEncoding`,
     fields: [
       {
         name: fieldName,
